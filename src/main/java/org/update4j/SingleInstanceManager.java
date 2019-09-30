@@ -15,12 +15,9 @@
  */
 package org.update4j;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.RandomAccessFile;
+import org.update4j.util.FileUtils;
+
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -31,11 +28,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import org.update4j.util.FileUtils;
 
 /**
  * A convenience class to force only a single instance of the code proceeding
@@ -174,7 +170,7 @@ public class SingleInstanceManager {
 	public static void execute(List<String> args, Consumer<? super List<String>> onNewInstance, Path lockFileDir) {
 
 		if (args == null) {
-			args = List.of();
+			args = Collections.emptyList();
 		}
 
 		if (lockFileDir == null) {

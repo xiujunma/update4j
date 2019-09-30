@@ -1,43 +1,24 @@
 package org.update4j;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.lang.module.ModuleDescriptor;
-import java.lang.module.ModuleDescriptor.Requires;
-import java.lang.module.ModuleFinder;
-import java.lang.module.ModuleReference;
-import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.FileSystemException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.SignatureException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.update4j.inject.Injectable;
 import org.update4j.inject.UnsatisfiedInjectionException;
 import org.update4j.service.Launcher;
 import org.update4j.service.Service;
 import org.update4j.service.UpdateHandler;
 import org.update4j.util.FileUtils;
-import org.update4j.util.StringUtils;
 import org.update4j.util.Warning;
+
+import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.*;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 class ConfigImpl {
 
@@ -296,94 +277,9 @@ class ConfigImpl {
 				throw new SecurityException("Signature verification failed.");
 		}
 
-		if (file.getPath().toString().endsWith(".jar") && !file.isIgnoreBootConflict()) {
-			checkBootConflicts(file, output);
-		}
-	}
-
-	private static void checkBootConflicts(FileMetadata file, Path download) throws IOException {
-		if (!FileUtils.isZipFile(download)) {
-			Warning.nonZip(file.getPath().getFileName().toString());
-			throw new IllegalStateException(
-							"File '" + file.getPath().getFileName().toString() + "' is not a valid zip file.");
-		}
-
-		Set<Module> modules = ModuleLayer.boot().modules();
-		Set<String> moduleNames = modules.stream().map(Module::getName).collect(Collectors.toSet());
-
-		ModuleDescriptor newMod = null;
-
-		// ModuleFinder will not cooperate otherwise
-		String newFilename = "a" + download.getFileName().toString();
-		Path newPath = download.getParent().resolve(newFilename + ".jar");
-
-		try {
-			Files.move(download, newPath);
-			newMod = ModuleFinder.of(newPath)
-							.findAll()
-							.stream()
-							.map(ModuleReference::descriptor)
-							.findAny()
-							.orElse(null);
-		} finally {
-			Files.move(newPath, download, StandardCopyOption.REPLACE_EXISTING);
-		}
-
-		if (newMod == null)
-			return;
-
-		// non-modular and no Automatic-Module-Name
-		// use real filename as module name
-		String newModuleName;
-		if (newFilename.equals(newMod.name())) {
-			newModuleName = StringUtils.deriveModuleName(file.getPath().getFileName().toString());
-			if (!StringUtils.isModuleName(newModuleName)) {
-				Warning.illegalAutomaticModule(newModuleName, file.getPath().getFileName().toString());
-				throw new IllegalStateException("Automatic module name '" + newModuleName + "' for file '"
-								+ file.getPath().getFileName() + "' is not valid.");
-			}
-		} else {
-			newModuleName = newMod.name();
-		}
-
-		if (moduleNames.contains(newModuleName)) {
-			Warning.moduleConflict(newModuleName);
-			throw new IllegalStateException(
-							"Module '" + newModuleName + "' conflicts with a module in the boot modulepath");
-		}
-
-		Set<String> packages = modules.stream().flatMap(m -> m.getPackages().stream()).collect(Collectors.toSet());
-		for (String p : newMod.packages()) {
-			if (packages.contains(p)) {
-				Warning.packageConflict(p);
-				throw new IllegalStateException("Package '" + p + "' in module '" + newMod.name()
-								+ "' conflicts with a package in the boot modulepath");
-
-			}
-		}
-
-		Set<String> sysMods = ModuleFinder.ofSystem()
-						.findAll()
-						.stream()
-						.map(mr -> mr.descriptor().name())
-						.collect(Collectors.toSet());
-
-		for (Requires require : newMod.requires()) {
-
-			// static requires are not mandatory
-			if (require.modifiers().contains(Requires.Modifier.STATIC))
-				continue;
-
-			String reqName = require.name();
-			if (StringUtils.isSystemModule(reqName)) {
-				if (!sysMods.contains(reqName)) {
-					Warning.missingSysMod(reqName);
-					throw new IllegalStateException("System module '" + reqName
-									+ "' is missing from JVM image, required by '" + newMod.name() + "'");
-				}
-
-			}
-		}
+//		if (file.getPath().toString().endsWith(".jar") && !file.isIgnoreBootConflict()) {
+//			checkBootConflicts(file, output);
+//		}
 	}
 
 	static void doLaunch(Configuration config, Injectable injectable, Launcher launcher) {
@@ -414,104 +310,101 @@ class ConfigImpl {
 			Warning.path();
 		}
 
-		ModuleFinder finder = ModuleFinder.of(modulepaths.toArray(new Path[modulepaths.size()]));
-
-		Set<ModuleDescriptor> moduleDescriptors = finder.findAll()
-						.stream()
-						.map(mr -> mr.descriptor())
-						.collect(Collectors.toSet());
-
-		// Warn if any module requires an unresolved system module
-		if (Warning.shouldWarn("unresolvedSystemModules")) {
-			Set<String> resolvedSysMods = ModuleLayer.boot()
-							.modules()
-							.stream()
-							.map(m -> m.getName())
-							.collect(Collectors.toSet());
-			
-			List<String> missingSysMods = new ArrayList<>();
-			
-			for (ModuleDescriptor descriptor : moduleDescriptors) {
-				for(Requires require : descriptor.requires()) {
-
-					// static requires are not mandatory
-					if (require.modifiers().contains(Requires.Modifier.STATIC))
-						continue;
-
-					String reqName = require.name();
-					if(StringUtils.isSystemModule(reqName)) {
-						if(!resolvedSysMods.contains(reqName)) {
-							missingSysMods.add(reqName);
-						}
-					}
-				}
-			}
-			if (missingSysMods.size() > 0)
-				Warning.unresolvedSystemModules(missingSysMods);
-			
-		}
-
-		List<String> moduleNames = moduleDescriptors.stream().map(ModuleDescriptor::name).collect(Collectors.toList());
-
-		ModuleLayer parent = ModuleLayer.boot();
-		java.lang.module.Configuration cf = parent.configuration()
-						.resolveAndBind(ModuleFinder.of(), finder, moduleNames);
-
+//		ModuleFinder finder = ModuleFinder.of(modulepaths.toArray(new Path[modulepaths.size()]));
+//
+//		Set<ModuleDescriptor> moduleDescriptors = finder.findAll()
+//						.stream()
+//						.map(mr -> mr.descriptor())
+//						.collect(Collectors.toSet());
+//
+//		// Warn if any module requires an unresolved system module
+//		if (Warning.shouldWarn("unresolvedSystemModules")) {
+//			Set<String> resolvedSysMods = ModuleLayer.boot()
+//							.modules()
+//							.stream()
+//							.map(m -> m.getName())
+//							.collect(Collectors.toSet());
+//
+//			List<String> missingSysMods = new ArrayList<>();
+//
+//			for (ModuleDescriptor descriptor : moduleDescriptors) {
+//				for(Requires require : descriptor.requires()) {
+//
+//					// static requires are not mandatory
+//					if (require.modifiers().contains(Requires.Modifier.STATIC))
+//						continue;
+//
+//					String reqName = require.name();
+//					if(StringUtils.isSystemModule(reqName)) {
+//						if(!resolvedSysMods.contains(reqName)) {
+//							missingSysMods.add(reqName);
+//						}
+//					}
+//				}
+//			}
+//			if (missingSysMods.size() > 0)
+//				Warning.unresolvedSystemModules(missingSysMods);
+//
+//		}
+//
+//		List<String> moduleNames = moduleDescriptors.stream().map(ModuleDescriptor::name).collect(Collectors.toList());
+//
+//		ModuleLayer parent = ModuleLayer.boot();
+//		java.lang.module.Configuration cf = parent.configuration()
+//						.resolveAndBind(ModuleFinder.of(), finder, moduleNames);
+//
 		ClassLoader parentClassLoader = Thread.currentThread().getContextClassLoader();
-		ClassLoader classpathLoader = new URLClassLoader("classpath", classpaths.toArray(new URL[classpaths.size()]),
+		ClassLoader classpathLoader = new URLClassLoader(classpaths.toArray(new URL[classpaths.size()]),
 						parentClassLoader);
-
-		ModuleLayer.Controller controller = ModuleLayer.defineModulesWithOneLoader(cf, List.of(parent),
-						classpathLoader);
-		ModuleLayer layer = controller.layer();
-
-		// manipulate exports, opens and reads
-		for (FileMetadata mod : modules) {
-			if (!mod.getAddExports().isEmpty() || !mod.getAddOpens().isEmpty() || !mod.getAddReads().isEmpty()) {
-				ModuleReference reference = finder.findAll()
-								.stream()
-								.filter(ref -> new File(ref.location().get()).toPath().equals(mod.getNormalizedPath()))
-								.findFirst()
-								.orElseThrow(IllegalStateException::new);
-
-				Module source = layer.findModule(reference.descriptor().name()).orElseThrow(IllegalStateException::new);
-
-				for (AddPackage export : mod.getAddExports()) {
-					Module target = layer.findModule(export.getTargetModule())
-									.orElseThrow(() -> new IllegalStateException("Module '" + export.getTargetModule()
-													+ "' is not known to the layer."));
-
-					controller.addExports(source, export.getPackageName(), target);
-				}
-
-				for (AddPackage open : mod.getAddOpens()) {
-					Module target = layer.findModule(open.getTargetModule())
-									.orElseThrow(() -> new IllegalStateException("Module '" + open.getTargetModule()
-													+ "' is not known to the layer."));
-
-					controller.addOpens(source, open.getPackageName(), target);
-				}
-
-				for (String read : mod.getAddReads()) {
-					Module target = layer.findModule(read)
-									.orElseThrow(() -> new IllegalStateException(
-													"Module '" + read + "' is not known to the layer."));
-
-					controller.addReads(source, target);
-				}
-			}
-		}
-
+//
+//		ModuleLayer.Controller controller = ModuleLayer.defineModulesWithOneLoader(cf, List.of(parent),
+//						classpathLoader);
+//		ModuleLayer layer = controller.layer();
+//
+//		// manipulate exports, opens and reads
+//		for (FileMetadata mod : modules) {
+//			if (!mod.getAddExports().isEmpty() || !mod.getAddOpens().isEmpty() || !mod.getAddReads().isEmpty()) {
+//				ModuleReference reference = finder.findAll()
+//								.stream()
+//								.filter(ref -> new File(ref.location().get()).toPath().equals(mod.getNormalizedPath()))
+//								.findFirst()
+//								.orElseThrow(IllegalStateException::new);
+//
+//				Module source = layer.findModule(reference.descriptor().name()).orElseThrow(IllegalStateException::new);
+//
+//				for (AddPackage export : mod.getAddExports()) {
+//					Module target = layer.findModule(export.getTargetModule())
+//									.orElseThrow(() -> new IllegalStateException("Module '" + export.getTargetModule()
+//													+ "' is not known to the layer."));
+//
+//					controller.addExports(source, export.getPackageName(), target);
+//				}
+//
+//				for (AddPackage open : mod.getAddOpens()) {
+//					Module target = layer.findModule(open.getTargetModule())
+//									.orElseThrow(() -> new IllegalStateException("Module '" + open.getTargetModule()
+//													+ "' is not known to the layer."));
+//
+//					controller.addOpens(source, open.getPackageName(), target);
+//				}
+//
+//				for (String read : mod.getAddReads()) {
+//					Module target = layer.findModule(read)
+//									.orElseThrow(() -> new IllegalStateException(
+//													"Module '" + read + "' is not known to the layer."));
+//
+//					controller.addReads(source, target);
+//				}
+//			}
+//		}
+//
 		ClassLoader contextClassLoader = classpathLoader;
-		if (moduleNames.size() > 0) {
-			contextClassLoader = layer.findLoader(moduleNames.get(0));
-		}
 
-		LaunchContext ctx = new LaunchContext(layer, contextClassLoader, config);
+		LaunchContext ctx = new LaunchContext(contextClassLoader, config);
 
 		boolean usingSpi = launcher == null;
 		if (usingSpi) {
-			launcher = Service.loadService(layer, contextClassLoader, Launcher.class, config.getLauncher());
+			launcher = Service.loadService(contextClassLoader, Launcher.class, config.getLauncher());
 
 			if (injectable != null) {
 				try {

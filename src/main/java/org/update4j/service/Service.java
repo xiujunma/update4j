@@ -15,14 +15,12 @@
  */
 package org.update4j.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
-import java.util.stream.Collectors;
-
 import org.update4j.inject.Injectable;
 import org.update4j.util.StringUtils;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public interface Service extends Injectable {
 
@@ -30,7 +28,7 @@ public interface Service extends Injectable {
 		return 0L;
 	}
 
-	public static <T extends Service> T loadService(ModuleLayer layer, ClassLoader classLoader, Class<T> type,
+	 static <T extends Service> T loadService(ClassLoader classLoader, Class<T> type,
 					String classname) {
 		if (classname != null && !StringUtils.isClassName(classname)) {
 			throw new IllegalArgumentException(classname + " is not a valid Java class name.");
@@ -41,30 +39,33 @@ public interface Service extends Injectable {
 		}
 
 		ServiceLoader<T> loader;
-		List<Provider<T>> providers = new ArrayList<>();
-
-		if (layer != null) {
-			loader = ServiceLoader.load(layer, type);
-			providers.addAll(loader.stream().collect(Collectors.toList()));
-		}
-
+		List<T> providers = new ArrayList<>();
+//
+//		if (layer != null) {
+//			loader = ServiceLoader.load(layer, type);
+//			providers.addAll(loader.stream().collect(Collectors.toList()));
+//		}
+//
 		loader = ServiceLoader.load(type, classLoader);
-		providers.addAll(loader.stream().collect(Collectors.toList()));
+		 Spliterator<T>
+				 spliterator = Spliterators
+				 .spliteratorUnknownSize(loader.iterator(), 0);
+		providers.addAll(StreamSupport.stream(spliterator, false).collect(Collectors.toList()));
 
 		if (classname != null) {
 			// an explicit class name is used
 			// first lets look at providers, to locate in closed modules
-			for (Provider<T> p : providers) {
-				if (p.type().getName().equals(classname))
-					return p.get();
-			}
+//			for (Provider<T> p : providers) {
+//				if (p.type().getName().equals(classname))
+//					return p.get();
+//			}
 
 			// nothing found, lets load with reflection
 			try {
 				Class<?> clazz = classLoader.loadClass(classname);
 
 				if (type.isAssignableFrom(clazz)) {
-					
+
 					// What do you mean?? look 1 line above
 					@SuppressWarnings("unchecked")
 					T value = (T) clazz.getConstructor().newInstance();
@@ -86,7 +87,7 @@ public interface Service extends Injectable {
 				throw new IllegalStateException("No provider found for " + type.getCanonicalName());
 			}
 
-			List<T> values = providers.stream().map(Provider::get).collect(Collectors.toList());
+			List<T> values = new ArrayList<>(providers);
 
 			long maxVersion = Long.MIN_VALUE;
 			T maxValue = null;
@@ -102,28 +103,28 @@ public interface Service extends Injectable {
 		}
 	}
 
-	public static <T extends Service> T loadService(ModuleLayer layer, ClassLoader classLoader, Class<T> type) {
-		return loadService(layer, classLoader, type, null);
-	}
+//	public static <T extends Service> T loadService(ModuleLayer layer, ClassLoader classLoader, Class<T> type) {
+//		return loadService(layer, classLoader, type, null);
+//	}
+//
+//	public static <T extends Service> T loadService(ModuleLayer layer, Class<T> type, String classname) {
+//		return loadService(layer, null, type, classname);
+//	}
+//
+//	public static <T extends Service> T loadService(ModuleLayer layer, Class<T> type) {
+//		return loadService(layer, null, type, null);
+//	}
 
-	public static <T extends Service> T loadService(ModuleLayer layer, Class<T> type, String classname) {
-		return loadService(layer, null, type, classname);
-	}
-
-	public static <T extends Service> T loadService(ModuleLayer layer, Class<T> type) {
-		return loadService(layer, null, type, null);
-	}
-
-	public static <T extends Service> T loadService(ClassLoader classLoader, Class<T> type, String classname) {
-		return loadService(null, classLoader, type, classname);
-	}
+//	public static <T extends Service> T loadService(ClassLoader classLoader, Class<T> type, String classname) {
+//		return loadService(classLoader, type, classname);
+//	}
 
 	public static <T extends Service> T loadService(ClassLoader classLoader, Class<T> type) {
-		return loadService(null, classLoader, type, null);
+		return loadService(classLoader, type, null);
 	}
 
 	public static <T extends Service> T loadService(Class<T> type, String classname) {
-		return loadService(null, null, type, classname);
+		return loadService(null, type, classname);
 	}
 
 	public static <T extends Service> T loadService(Class<T> type) {

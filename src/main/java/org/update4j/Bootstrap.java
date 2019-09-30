@@ -15,13 +15,16 @@
  */
 package org.update4j;
 
+import org.update4j.inject.Injectable;
+import org.update4j.service.Delegate;
+import org.update4j.service.Service;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.update4j.inject.Injectable;
-import org.update4j.service.Delegate;
-import org.update4j.service.Service;
+import static java.util.Arrays.asList;
 
 /**
  * This class consists of convenience methods and the module's main method to
@@ -83,7 +86,7 @@ public class Bootstrap {
 	 */
 	public static void main(String[] args) throws Throwable {
 		String classname = null;
-		List<String> argsList = List.of(args);
+		List<String> argsList = asList(args);
 
 		if (args.length > 0) {
 
@@ -292,7 +295,7 @@ public class Bootstrap {
 	 *             Any throwable thrown in the bootstrap.
 	 */
 	public static void start(Delegate delegate, List<String> args) throws Throwable {
-		args = args == null ? List.of() : args;
+		args = args == null ? Collections.emptyList() : args;
 		delegate.main(args);
 	}
 }

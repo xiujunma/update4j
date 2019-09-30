@@ -15,22 +15,16 @@
  */
 package org.update4j.util;
 
+import org.update4j.OS;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.Signature;
-import java.security.SignatureException;
+import java.nio.file.*;
+import java.security.*;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
@@ -41,7 +35,7 @@ import java.util.stream.Collectors;
 import java.util.zip.Adler32;
 import java.util.zip.ZipFile;
 
-import org.update4j.OS;
+import static java.util.Arrays.asList;
 
 public class FileUtils {
 
@@ -256,10 +250,10 @@ public class FileUtils {
 						.collect(Collectors.joining(" "));
 
 		if (OS.CURRENT == OS.WINDOWS) {
-			commands.addAll(List.of("cmd", "/c"));
+			commands.addAll(asList("cmd", "/c"));
 			commands.add("ping localhost -n " + (secondsDelay + 1) + " & del " + filenames);
 		} else {
-			commands.addAll(List.of("sh", "-c"));
+			commands.addAll(asList("sh", "-c"));
 			commands.add("sleep " + secondsDelay + " ; rm " + filenames);
 		}
 

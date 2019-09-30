@@ -15,9 +15,9 @@
  */
 package org.update4j;
 
-import java.util.Objects;
-
 import org.update4j.service.Launcher;
+
+import java.util.Objects;
 
 /**
  * A class that contain details of the launch.
@@ -27,12 +27,12 @@ import org.update4j.service.Launcher;
  */
 public class LaunchContext {
 
-	private ModuleLayer layer;
+//	private ModuleLayer layer;
 	private ClassLoader classLoader;
 	private Configuration config;
 
-	LaunchContext(ModuleLayer layer, ClassLoader classLoader, Configuration config) {
-		this.layer = Objects.requireNonNull(layer);
+	LaunchContext(ClassLoader classLoader, Configuration config) {
+//		this.layer = Objects.requireNonNull(layer);
 		this.classLoader = Objects.requireNonNull(classLoader);
 		this.config = Objects.requireNonNull(config);
 	}
@@ -43,9 +43,9 @@ public class LaunchContext {
 	 * 
 	 * @return The dynamic module layer.
 	 */
-	public ModuleLayer getModuleLayer() {
-		return layer;
-	}
+//	public ModuleLayer getModuleLayer() {
+//		return layer;
+//	}
 
 	/**
 	 * Returns the class loader that classes in the dynamic classpath or modulepath

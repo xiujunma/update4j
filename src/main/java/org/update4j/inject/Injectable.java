@@ -67,7 +67,7 @@ public interface Injectable {
 
 	}
 
-	public static void injectUnidirectional(Injectable source, Injectable target)
+	static void injectUnidirectional(Injectable source, Injectable target)
 					throws IllegalAccessException, UnsatisfiedInjectionException, InvocationTargetException {
 		Map<String, Object> sourceObjects = getSourceObjects(source);
 		injectValues(target, sourceObjects);
@@ -76,7 +76,7 @@ public interface Injectable {
 		notifyPostInject(target, source);
 	}
 
-	private static Map<String, Object> getSourceObjects(Injectable obj) throws IllegalAccessException {
+	static Map<String, Object> getSourceObjects(Injectable obj) throws IllegalAccessException {
 		Map<String, Object> map = new HashMap<>();
 
 		for (Field f : obj.getClass().getDeclaredFields()) {
@@ -101,7 +101,7 @@ public interface Injectable {
 		return map;
 	}
 
-	private static void injectValues(Injectable obj, Map<String, Object> map)
+	static void injectValues(Injectable obj, Map<String, Object> map)
 					throws UnsatisfiedInjectionException, IllegalAccessException {
 		for (Field f : obj.getClass().getDeclaredFields()) {
 			InjectTarget annotation = f.getAnnotation(InjectTarget.class);
@@ -121,7 +121,7 @@ public interface Injectable {
 		}
 	}
 
-	private static void notifyPostInject(Injectable callback, Injectable parameter)
+	static void notifyPostInject(Injectable callback, Injectable parameter)
 					throws IllegalAccessException, InvocationTargetException {
 		for (Method m : callback.getClass().getDeclaredMethods()) {
 			PostInject annotation = m.getAnnotation(PostInject.class);

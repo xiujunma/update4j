@@ -15,21 +15,14 @@
  */
 package org.update4j.util;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.update4j.OS;
 import org.update4j.PlaceholderMatchType;
 import org.update4j.Property;
+
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class PropertyManager {
 
@@ -335,7 +328,7 @@ public class PropertyManager {
 						String sys = trySystemProperty(key);
 
 						noDeps.put(key, sys);
-						found.add(Map.entry(key, sys));
+						found.add(new AbstractMap.SimpleEntry<>(key, sys));
 
 						foundSystem = true;
 					}

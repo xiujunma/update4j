@@ -15,6 +15,7 @@
  */
 package org.update4j.util;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -80,7 +81,7 @@ public class ArgUtils {
 	public static List<String> afterSeparator(List<String> args) {
 		int separatorIdx = args.indexOf("--");
 		if (separatorIdx < 0) {
-			return List.of();
+			return Collections.emptyList();
 		} else {
 			return args.subList(separatorIdx + 1, args.size());
 		}

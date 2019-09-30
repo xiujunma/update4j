@@ -16,6 +16,8 @@
 package org.update4j.util;
 
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class StringUtils {
 
@@ -29,18 +31,18 @@ public class StringUtils {
 	private static final Set<String> systemModules;
 
 	static {
-		keywords = Set.of("abstract", "continue", "for", "new", "switch", "assert", "default", "goto", "package",
+		keywords = Stream.of("abstract", "continue", "for", "new", "switch", "assert", "default", "goto", "package",
 						"synchronized", "boolean", "do", "if", "private", "this", "break", "double", "implements",
 						"protected", "throw", "byte", "else", "import", "public", "throws", "case", "enum",
 						"instanceof", "return", "transient", "catch", "extends", "int", "short", "try", "char", "final",
 						"interface", "static", "void", "class", "finally", "long", "strictfp", "volatile", "const",
-						"float", "native", "super", "while");
+						"float", "native", "super", "while").collect(Collectors.toSet());
 
-		moduleKeywords = Set.of("module", "open", "opens", "exports", "requires", "transitive", "to", "with",
-						"provides", "uses");
+		moduleKeywords = Stream.of("module", "open", "opens", "exports", "requires", "transitive", "to", "with",
+						"provides", "uses").collect(Collectors.toSet());
 
 		// Last updated JDK 11
-		systemModules = Set.of("java.rmi", "jdk.management.jfr", "jdk.jdi", "jdk.charsets", "jdk.pack", "java.xml",
+		systemModules = Stream.of("java.rmi", "jdk.management.jfr", "jdk.jdi", "jdk.charsets", "jdk.pack", "java.xml",
 						"jdk.xml.dom", "jdk.rmic", "java.datatransfer", "jdk.jstatd", "jdk.httpserver", "jdk.jcmd",
 						"java.desktop", "java.se", "java.security.sasl", "jdk.zipfs", "java.base", "jdk.crypto.ec",
 						"jdk.javadoc", "jdk.management.agent", "jdk.jshell", "jdk.editpad", "java.sql.rowset",
@@ -54,7 +56,7 @@ public class StringUtils {
 						"jdk.jdwp.agent", "jdk.internal.jvmstat", "java.instrument", "jdk.internal.vm.compiler",
 						"jdk.internal.vm.compiler.management", "jdk.management", "jdk.security.auth", "java.scripting",
 						"jdk.jdeps", "jdk.aot", "jdk.jartool", "java.management.rmi", "jdk.naming.dns",
-						"jdk.localedata");
+						"jdk.localedata").collect(Collectors.toSet());
 	}
 
 	public static boolean isClassName(String name) {
